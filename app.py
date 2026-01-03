@@ -2,42 +2,45 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image
 
-# 设置页面
 st.set_page_config(page_title="AI作业督导", page_icon="📚")
 st.title("📚 AI 作业督导系统")
 
-# 从设置中安全获取密钥
+# 检查密钥
 if "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('models/gemini-1.5-flash')
+    # 使用 models/ 前缀是目前最稳定的写法
+    try:
+        model = genai.GenerativeModel('models/gemini-1.5-flash')
+    except Exception as e:
+        st.error(f"模型初始化失败，请检查API权限: {e}")
 else:
-    st.error("请输入 API 密钥以继续。")
+    st.error("请在 Settings -> Secrets 中输入 GEMINI_API_KEY")
     st.stop()
 
-# 界面设计
-tab1, tab2 = st.tabs(["📅 作业规划", "✅ 提交证明"])
+# 侧边栏：显示当前状态
+st.sidebar.success("大脑连接状态：正常" if api_key else "大脑连接状态：断开")
 
-with tab1:
-    st.header("第一步：上传清单")
-    uploaded_list = st.file_uploader("拍摄作业清单", type=['jpg', 'png', 'jpeg'], key="list")
-    if uploaded_list:
-        img = Image.open(uploaded_list)
-        st.image(img, caption="已收到的清单", width=300)
-        if st.button("让AI制定计划"):
-            with st.spinner('AI 正在看你的作业...'):
-                prompt = "你是一个严谨且有幽默感的督导老师。请识别图中所有的作业任务，并根据现在的时间为我制定一个详细的完成计划。如果任务非常重，请给我一点鼓励或警告。"
+# 上传组件
+img_file = st.file_uploader("拍照上传你的作业清单或完成图", type=['jpg', 'png', 'jpeg'])
+
+if img_file:
+    img = Image.open(img_file)
+    st.image(img, caption="图片已加载", width=300)
+    
+    task_type = st.radio("你想让AI做什么？", ["制定时间规划", "检查完成情况并打分"])
+    
+    if st.button("开始分析"):
+        with st.spinner('AI 正在发功...'):
+            try:
+                if task_type == "制定时间规划":
+                    prompt = "你是一个高效学习专家。请识别图中的作业，并根据任务量给我一个晚上2小时内的具体时间分配建议。"
+                else:
+                    prompt = "请检查这张作业是否写完了。如果写完了请夸我；如果没写完或在敷衍，请随机生成一个身体锻炼惩罚，并用毒舌语气说出来。"
+                
                 response = model.generate_content([prompt, img])
-                st.markdown(f"### 📋 AI 的规划建议：\n{response.text}")
-
-with tab2:
-    st.header("第二步：完成打卡")
-    uploaded_proof = st.file_uploader("拍摄完成的作业（证明材料）", type=['jpg', 'png', 'jpeg'], key="proof")
-    if uploaded_proof:
-        img_p = Image.open(uploaded_proof)
-        st.image(img_p, caption="你提交的证明", width=300)
-        if st.button("请求AI审核"):
-            with st.spinner('AI 正在检查你有没有偷懒...'):
-                prompt = "请核对这张作业图片是否真的完成了作业要求。如果看起来完成了，请热烈夸奖；如果看起来是乱涂乱画或完全没做，请给出一个有趣的轻微惩罚（比如：罚做20个深蹲，或者不准玩手机10分钟）。"
-                response = model.generate_content([prompt, img_p])
-                st.success(response.text)
+                st.write("---")
+                st.markdown(response.text)
+            except Exception as e:
+                st.error(f"分析失败。错误原因：{e}")
+                st.info("提示：如果显示 NotFound，请去 AI Studio 确认 API 密钥是否有效。")

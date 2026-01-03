@@ -10,7 +10,7 @@ st.title("📚 AI 作业督导系统")
 if "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"]
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-1.5-flash-latest')
 else:
     st.error("请输入 API 密钥以继续。")
     st.stop()

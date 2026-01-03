@@ -11,7 +11,8 @@ if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=api_key)
     # 使用 models/ 前缀是目前最稳定的写法
     try:
-        model = genai.GenerativeModel('models/gemini-1.5-flash')
+       # 建议直接使用这个写法，这是目前最通用的
+model = genai.GenerativeModel('gemini-1.5-flash')
     except Exception as e:
         st.error(f"模型初始化失败，请检查API权限: {e}")
 else:
